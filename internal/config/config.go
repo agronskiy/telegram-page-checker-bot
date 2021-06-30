@@ -13,6 +13,7 @@ type SingleURL struct {
 	Url     string `yaml:"url"`
 	UserID  int64  `yaml:"user_id"`
 	Enabled bool   `yaml:"enabled"`
+	Type    string `yaml:"type"`
 }
 
 type ElementIds struct {
