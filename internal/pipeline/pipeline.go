@@ -72,16 +72,34 @@ func proceedToSecondStage(
 	htmlIds *config.ElementIds,
 	result *pipres.PipelineResult,
 ) chromedp.Tasks {
+	// There are two types of second stage.
+	if singleUrl.Type == "initial" {
+		return chromedp.Tasks{
+			chromedp.WaitVisible("footer", chromedp.ByID),
+			chromedp.ActionFunc(func(ctx context.Context) error {
+				var nodes []*cdp.Node
+				if err := chromedp.Nodes(
+					htmlIds.SecondStageButtonID, &nodes, chromedp.ByID, chromedp.AtLeast(0)).Do(ctx); err != nil {
+					return err
+				}
+				if len(nodes) == 0 {
+					*result = pipres.MaybeAlreadySigned
+				}
+				return nil
+			}),
+		}
+	}
+
 	return chromedp.Tasks{
 		chromedp.WaitVisible("footer", chromedp.ByID),
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			var nodes []*cdp.Node
 			if err := chromedp.Nodes(
-				htmlIds.SecondStageButtonID, &nodes, chromedp.ByID, chromedp.AtLeast(0)).Do(ctx); err != nil {
+				htmlIds.SecondStageBisCheckID, &nodes, chromedp.ByID, chromedp.AtLeast(0)).Do(ctx); err != nil {
 				return err
 			}
 			if len(nodes) == 0 {
-				*result = pipres.MaybeAlreadySigned
+				*result = pipres.NoRescheduleTasks
 			}
 			return nil
 		}),
@@ -93,13 +111,34 @@ func proceedToThirdStage(
 	htmlIds *config.ElementIds,
 	result *pipres.PipelineResult,
 ) chromedp.Tasks {
+	if singleUrl.Type == "initial" {
+		return chromedp.Tasks{
+			chromedp.Click(htmlIds.SecondStageButtonID, chromedp.ByID),
+			chromedp.ActionFunc(func(context.Context) error {
+				log.WithField("name", singleUrl.Name).Println("Waiting after clicked second stage button")
+				return nil
+			}),
+			chromedp.Sleep(1 * time.Second),
+		}
+	}
+
 	return chromedp.Tasks{
-		chromedp.Click(htmlIds.SecondStageButtonID, chromedp.ByID),
+		chromedp.Click(htmlIds.SecondStageBisCheckID, chromedp.ByID),
+		chromedp.Click(htmlIds.SecondStageBisButtonID, chromedp.ByID),
 		chromedp.ActionFunc(func(context.Context) error {
-			log.WithField("name", singleUrl.Name).Println("Waiting after clicked second stage button")
+			log.WithField("name", singleUrl.Name).Println("Waiting after clicked second stage bis button")
 			return nil
 		}),
 		chromedp.Sleep(1 * time.Second),
+	}
+}
+
+func checkThirdStageResult(
+	singleUrl *config.SingleURL,
+	htmlIds *config.ElementIds,
+	result *pipres.PipelineResult,
+) chromedp.Tasks {
+	return chromedp.Tasks{
 		chromedp.WaitVisible("footer", chromedp.ByID),
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			var hasExcuseMe = regexp.MustCompile("Извините")
@@ -180,6 +219,10 @@ func RunWholePipeline(
 
 	if result == pipres.Undefined {
 		if err := chromedp.Run(ctx, proceedToThirdStage(singleUrl, htmlIds, &result)); err != nil {
+			log.Fatal(err)
+		}
+
+		if err := chromedp.Run(ctx, checkThirdStageResult(singleUrl, htmlIds, &result)); err != nil {
 			log.Fatal(err)
 		}
 	}

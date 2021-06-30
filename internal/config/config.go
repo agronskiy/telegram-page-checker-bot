@@ -22,6 +22,9 @@ type ElementIds struct {
 	CaptchaErrID        string `yaml:"captcha_err_id"`
 	CaptchaButtonID     string `yaml:"captcha_button_id"`
 	SecondStageButtonID string `yaml:"second_stage_button_id"`
+
+	SecondStageBisCheckID  string `yaml:"second_stage_bis_check_id"`
+	SecondStageBisButtonID string `yaml:"second_stage_bis_button_id"`
 }
 
 type Config struct {

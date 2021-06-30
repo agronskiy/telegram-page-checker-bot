@@ -30,6 +30,8 @@ func sayResult(singleUrl *config.SingleURL, result pipres.PipelineResult, needSa
 		text = fmt.Sprintf("✅ Есть слот, беги регистрироваться!\n🆔: %s\n🔗: %s", singleUrl.Name, singleUrl.Url)
 	} else if result == pipres.SlotNotAvailable {
 		text = fmt.Sprintf("🤷 Слотов нет, ждем...\n🆔: %s\n🔗: %s", singleUrl.Name, singleUrl.Url)
+	} else if result == pipres.NoRescheduleTasks {
+		text = fmt.Sprintf("🤔 Не нашел слотов для переноса!\n🆔: %s\n🔗: %s", singleUrl.Name, singleUrl.Url)
 	} else {
 		text = fmt.Sprintf("🤔 Возможно, слот уже зарегистрирован?\n🆔: %s\n🔗: %s", singleUrl.Name, singleUrl.Url)
 	}
