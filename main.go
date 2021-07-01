@@ -22,10 +22,15 @@ func doTick(
 ) {
 	log := log.WithField("name", singleUrl.Name)
 
+	if t.UTC().Hour() < cfg.AllowedRequestsMinHour || t.UTC().Hour() >= cfg.AllowedRequestsMaxHour {
+		log.WithField("user", singleUrl.Name).Println("Skipping request outside of hours")
+		return
+	}
+
 	needSayNegative := false
 	// We still send even a negative message as health check. Sending it in the morning.
 	_, ok := lastReports[singleUrl.GetHash()]
-	isWithinRange := t.UTC().Hour() > cfg.HealthCheckMinHour && t.UTC().Hour() < cfg.HealthCheckMaxHour
+	isWithinRange := t.UTC().Hour() >= cfg.HealthCheckMinHour && t.UTC().Hour() < cfg.HealthCheckMaxHour
 	canSendHealthCheck := (!ok ||
 		(t.Sub(lastReports[singleUrl.GetHash()]).Hours() >
 			float64(cfg.HealthCheckMaxHour-cfg.HealthCheckMinHour)))

@@ -28,13 +28,15 @@ type ElementIds struct {
 }
 
 type Config struct {
-	ApiKey             string       `yaml:"api_key"`
-	Port               int32        `yaml:"port"`
-	IntervalMinute     int          `yaml:"minute_interval"`
-	HealthCheckMinHour int          `yaml:"health_check_min_hour"`
-	HealthCheckMaxHour int          `yaml:"health_check_max_hour"`
-	HtmlElems          ElementIds   `yaml:"html"`
-	Urls               []*SingleURL `yaml:"urls"`
+	ApiKey                 string       `yaml:"api_key"`
+	Port                   int32        `yaml:"port"`
+	IntervalMinute         int          `yaml:"minute_interval"`
+	AllowedRequestsMinHour int          `yaml:"allowed_requests_min_hour"`
+	AllowedRequestsMaxHour int          `yaml:"allowed_requests_max_hour"`
+	HealthCheckMinHour     int          `yaml:"health_check_min_hour"`
+	HealthCheckMaxHour     int          `yaml:"health_check_max_hour"`
+	HtmlElems              ElementIds   `yaml:"html"`
+	Urls                   []*SingleURL `yaml:"urls"`
 }
 
 func ReadConfig(cfg *Config) {
@@ -48,6 +50,11 @@ func ReadConfig(cfg *Config) {
 	err = decoder.Decode(cfg)
 	if err != nil {
 		panic(err)
+	}
+
+	if cfg.AllowedRequestsMinHour > cfg.HealthCheckMinHour ||
+		cfg.AllowedRequestsMaxHour < cfg.HealthCheckMaxHour {
+		panic("Health check interval must be inside allowed request hour interval")
 	}
 }
 
