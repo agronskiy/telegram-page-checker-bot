@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"math/rand"
 	"time"
 
 	"github.com/agronskiy/telegram-page-checker-bot/internal/config"
@@ -60,14 +61,20 @@ func runPeriodicChecks() {
 		}
 	}
 
-	nextCheck := time.NewTicker(time.Duration(cfg.IntervalMinute) * time.Minute)
-	for t := range nextCheck.C {
+	minInterval := cfg.IntervalMinute
+	maxInterval := cfg.IntervalMinute + 10
+	nextCheck := time.NewTicker(time.Duration(
+		rand.Intn(maxInterval-minInterval)+minInterval) * time.Minute)
+	for {
+		t := <-nextCheck.C
 		for _, singleUrl := range cfg.Urls {
 			if singleUrl.Enabled {
 				doTick(singleUrl, &cfg.HtmlElems, t, lastReports, ctx)
 			}
 		}
-
+		nextCheck.Stop()
+		nextCheck = time.NewTicker(time.Duration(
+			rand.Intn(maxInterval-minInterval)+minInterval) * time.Minute)
 	}
 }
 
@@ -79,6 +86,7 @@ func main() {
 	})
 
 	config.ReadConfig(&cfg)
+	rand.Seed(time.Now().UnixNano())
 
 	runPeriodicChecks()
 }
