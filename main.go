@@ -17,6 +17,7 @@ var cfg config.Config
 func doTick(
 	singleUrl *config.SingleURL,
 	htmlIds *config.ElementIds,
+	adminId int64,
 	t time.Time,
 	lastReports map[uint32]time.Time,
 	ctx context.Context,
@@ -42,7 +43,7 @@ func doTick(
 	}
 
 	result := pipeline.RunWholePipeline(singleUrl, htmlIds, ctx)
-	if err := sayResult(singleUrl, result, needSayNegative); err != nil {
+	if err := sayResult(singleUrl, adminId, result, needSayNegative); err != nil {
 		log.WithField("user", singleUrl.Name).Println("error in sending reply:", err)
 	}
 }
@@ -58,7 +59,7 @@ func runPeriodicChecks() {
 
 	for _, singleUrl := range cfg.Urls {
 		if singleUrl.Enabled {
-			doTick(singleUrl, &cfg.HtmlElems, time.Now(), lastReports, ctx)
+			doTick(singleUrl, &cfg.HtmlElems, cfg.AdminUserId, time.Now(), lastReports, ctx)
 		}
 	}
 
@@ -70,7 +71,7 @@ func runPeriodicChecks() {
 		t := <-nextCheck.C
 		for _, singleUrl := range cfg.Urls {
 			if singleUrl.Enabled {
-				doTick(singleUrl, &cfg.HtmlElems, t, lastReports, ctx)
+				doTick(singleUrl, &cfg.HtmlElems, cfg.AdminUserId, t, lastReports, ctx)
 			}
 		}
 		nextCheck.Stop()

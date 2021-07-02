@@ -29,7 +29,7 @@ type ElementIds struct {
 
 type Config struct {
 	ApiKey                 string       `yaml:"api_key"`
-	Port                   int32        `yaml:"port"`
+	AdminUserId            int64        `yaml:"admin_user_id"`
 	IntervalMinute         int          `yaml:"minute_interval"`
 	AllowedRequestsMinHour int          `yaml:"allowed_requests_min_hour"`
 	AllowedRequestsMaxHour int          `yaml:"allowed_requests_max_hour"`

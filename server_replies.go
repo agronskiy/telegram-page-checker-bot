@@ -19,7 +19,11 @@ type sendMessageReqBody struct {
 	Text   string `json:"text"`
 }
 
-func sayResult(singleUrl *config.SingleURL, result pipres.PipelineResult, needSayNegative bool) error {
+func sayResult(singleUrl *config.SingleURL,
+	adminId int64,
+	result pipres.PipelineResult,
+	needSayNegative bool,
+) error {
 	if result != pipres.SlotAvailable && !needSayNegative {
 		return nil
 	}
@@ -29,30 +33,33 @@ func sayResult(singleUrl *config.SingleURL, result pipres.PipelineResult, needSa
 	if result == pipres.SlotAvailable {
 		text = fmt.Sprintf("✅ Есть слот, беги регистрироваться!\n🆔: %s\n🔗: %s", singleUrl.Name, singleUrl.Url)
 	} else if result == pipres.SlotNotAvailable {
-		text = fmt.Sprintf("🤷 Слотов нет, ждем...\n🆔: %s\n🔗: %s", singleUrl.Name, singleUrl.Url)
+		text = fmt.Sprintf("🤷 Слотов пока нет, ждем...\n🆔: %s\n🔗: %s", singleUrl.Name, singleUrl.Url)
 	} else if result == pipres.NoRescheduleTasks {
 		text = fmt.Sprintf("🤔 Не нашел слотов для переноса!\n🆔: %s\n🔗: %s", singleUrl.Name, singleUrl.Url)
 	} else {
 		text = fmt.Sprintf("🤔 Возможно, слот уже зарегистрирован?\n🆔: %s\n🔗: %s", singleUrl.Name, singleUrl.Url)
 	}
-	reqBody := &sendMessageReqBody{
-		ChatID: singleUrl.UserID,
-		Text:   text,
-	}
-	// Create the JSON body from the struct
-	reqBytes, err := json.Marshal(reqBody)
-	if err != nil {
-		return err
-	}
 
-	// Send a post request with your token
-	var bot_url string = fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", cfg.ApiKey)
-	res, err := http.Post(bot_url, "application/json", bytes.NewBuffer(reqBytes))
-	if err != nil {
-		return err
-	}
-	if res.StatusCode != http.StatusOK {
-		return errors.New("unexpected status" + res.Status)
+	for _, recipient_id := range []int64{singleUrl.UserID, adminId} {
+		reqBody := &sendMessageReqBody{
+			ChatID: recipient_id,
+			Text:   text,
+		}
+		// Create the JSON body from the struct
+		reqBytes, err := json.Marshal(reqBody)
+		if err != nil {
+			return err
+		}
+
+		// Send a post request with your token
+		var bot_url string = fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", cfg.ApiKey)
+		res, err := http.Post(bot_url, "application/json", bytes.NewBuffer(reqBytes))
+		if err != nil {
+			return err
+		}
+		if res.StatusCode != http.StatusOK {
+			return errors.New("unexpected status" + res.Status)
+		}
 	}
 
 	return nil
