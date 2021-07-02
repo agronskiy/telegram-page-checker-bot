@@ -48,6 +48,7 @@ func doTick(
 }
 
 func runPeriodicChecks() {
+
 	// We create browser
 	ctx, cancel := chromedp.NewContext(context.Background())
 	defer cancel()

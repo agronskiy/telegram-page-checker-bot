@@ -14,6 +14,7 @@ import (
 
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/dom"
+	"github.com/chromedp/cdproto/emulation"
 	"github.com/chromedp/chromedp"
 
 	log "github.com/sirupsen/logrus"
@@ -22,6 +23,7 @@ import (
 func saveCaptchaImg(singleUrl *config.SingleURL, htmlIds *config.ElementIds, res *[]byte) chromedp.Tasks {
 	log := log.WithField("name", singleUrl.Name)
 	return chromedp.Tasks{
+		emulation.SetDeviceMetricsOverride(1680, 1050, 1.0, false),
 		chromedp.ActionFunc(func(context.Context) error {
 			log.WithField("url", singleUrl.Url).Printf("Navigating to URL")
 			return nil
@@ -162,8 +164,12 @@ func checkThirdStageResult(
 	}
 }
 
+// RunWholePipeline returns the result and number of retries
 func RunWholePipeline(
-	singleUrl *config.SingleURL, htmlIds *config.ElementIds, ctx context.Context) pipres.PipelineResult {
+	singleUrl *config.SingleURL,
+	htmlIds *config.ElementIds,
+	ctx context.Context,
+) pipres.PipelineResult {
 	log := log.WithField("name", singleUrl.Name)
 
 	log.Print("Opening child chromedp context")
@@ -227,7 +233,7 @@ func RunWholePipeline(
 		}
 	}
 
-	log.WithField("availability", result).Printf("Slot availability deduced")
+	log.WithField("availability", result).WithField("requests", numRetries).Printf("Slot availability deduced")
 	chromedp.Cancel(ctx)
 	return result
 }
