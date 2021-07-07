@@ -3,7 +3,9 @@ import sys
 import os
 import binascii
 
+from typing import Dict
 from functools import partial
+from collections import defaultdict
 
 import cv2
 import numpy as np
@@ -17,7 +19,7 @@ def get_grayscale(image):
 
 # noise removal
 def remove_noise(image):
-    return cv2.medianBlur(image, 3)
+    return cv2.medianBlur(image, 5)
 
 
 # thresholding
@@ -27,25 +29,25 @@ def thresholding(image):
 
 # dilation
 def dilate(image):
-    kernel = np.ones((5, 5), np.uint8)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4, 4))
     return cv2.dilate(image, kernel, iterations=1)
 
 
 # erosion
 def erode(image):
-    kernel = np.ones((5, 5), np.uint8)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4, 4))
     return cv2.erode(image, kernel, iterations=1)
 
 
 # closing - dilation followed by erosion
 def closing(image):
-    kernel = np.ones((3, 3), np.uint8)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4, 4))
     return cv2.morphologyEx(image, cv2.MORPH_CLOSE, kernel)
 
 
 # opening - erosion followed by dilation
 def opening(image):
-    kernel = np.ones((3, 3), np.uint8)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4, 4))
     return cv2.morphologyEx(image, cv2.MORPH_OPEN, kernel)
 
 
@@ -85,8 +87,8 @@ def transform0(img):
 
 
 def transform1(img, shear_scale):
-    img = get_grayscale(img)
     img = remove_noise(img)
+    img = get_grayscale(img)
     img = thresholding(img)
     img = opening(img)
     img = closing(img)
@@ -130,29 +132,46 @@ def transform1(img, shear_scale):
 
 
 def main():
+    best_matches: Dict[str, int] = defaultdict(int)
     for t in [
         transform0,
+        partial(transform1, shear_scale=0.025),
+        partial(transform1, shear_scale=-0.025),
         partial(transform1, shear_scale=0.05),
-        partial(transform1, shear_scale=-0.5),
+        partial(transform1, shear_scale=-0.05),
         partial(transform1, shear_scale=0.075),
         partial(transform1, shear_scale=-0.075),
         partial(transform1, shear_scale=0.1),
         partial(transform1, shear_scale=-0.1),
+        partial(transform1, shear_scale=0.125),
+        partial(transform1, shear_scale=-0.125),
     ]:
         img = cv2.imread(sys.argv[1])
-        img = cv2.resize(img, (280, 70), interpolation=cv2.INTER_CUBIC)
+        img = cv2.resize(img, (300, 85), interpolation=cv2.INTER_CUBIC)
         img = t(img)
 
         custom_config = r"--psm 8 --oem 3 -c tessedit_char_whitelist=0123456789"
         res = pytesseract.image_to_string(img, config=custom_config)
         match = re.match(r"\d{6,6}", res)
         if match:
-            print(match.group())
-            return
+            best_matches[match.group()] += 1
+
         else:
             # Uncomment to enable saving wrong images (e.g. to later inspect them)
             # cv2.imwrite(sys.argv[1][:-4] + ".wrongmatch-" + str(binascii.hexlify(os.urandom(20))) + ".png", img)
             continue
+
+    if len(best_matches) == 0:
+        return
+
+    max_match_num = 0
+    result = ""
+    for curr_match, num in best_matches.items():
+        if num > max_match_num:
+            max_match_num = num
+            result = curr_match
+
+    print(result)
 
 
 if __name__ == "__main__":
