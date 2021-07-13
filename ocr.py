@@ -131,6 +131,45 @@ def transform1(img, shear_scale):
     return img
 
 
+def transform2(img, perspective_scale):
+    height, width = img.shape[:2]
+    dx = int(perspective_scale * width)
+
+    box0 = np.array(
+        [
+            [0, 0],
+            [width, 0],
+            [width, height],
+            [0, height],
+        ],
+        np.float32,
+    )
+    box1 = np.array(
+        [
+            [+dx / 2, 0],
+            [width - dx / 2, 0],
+            [width + dx / 2, height],
+            [-dx / 2, height],
+        ],
+        np.float32,
+    )
+
+    box0 = box0.astype(np.float32)
+    box1 = box1.astype(np.float32)
+    mat = cv2.getPerspectiveTransform(box0, box1)
+
+    img = cv2.warpPerspective(
+        img,
+        mat,
+        (width, height),
+        flags=cv2.INTER_LINEAR,
+        borderMode=cv2.BORDER_CONSTANT,
+        borderValue=(255),
+    )
+
+    return img
+
+
 def main():
     best_matches: Dict[str, int] = defaultdict(int)
     for t in [
@@ -146,20 +185,36 @@ def main():
         partial(transform1, shear_scale=0.125),
         partial(transform1, shear_scale=-0.125),
     ]:
-        img = cv2.imread(sys.argv[1])
-        img = cv2.resize(img, (300, 85), interpolation=cv2.INTER_CUBIC)
-        img = t(img)
+        for t2 in [
+            partial(transform2, perspective_scale=0),
+            partial(transform2, perspective_scale=0.025),
+            partial(transform2, perspective_scale=-0.025),
+            partial(transform2, perspective_scale=0.05),
+            partial(transform2, perspective_scale=-0.05),
+            partial(transform2, perspective_scale=0.075),
+            partial(transform2, perspective_scale=-0.075),
+            partial(transform2, perspective_scale=0.1),
+            partial(transform2, perspective_scale=-0.1),
+            partial(transform2, perspective_scale=0.2),
+            partial(transform2, perspective_scale=-0.2),
+        ]:
+            img = cv2.imread(sys.argv[1])
+            img = cv2.resize(img, (300, 85), interpolation=cv2.INTER_CUBIC)
+            img = t(img)
+            img = t2(img)
 
-        custom_config = r"--psm 8 --oem 3 -c tessedit_char_whitelist=0123456789"
-        res = pytesseract.image_to_string(img, config=custom_config)
-        match = re.match(r"\d{6,6}", res)
-        if match:
-            best_matches[match.group()] += 1
+            # cv2.imwrite(sys.argv[1][:-4] + ".test-" + str(binascii.hexlify(os.urandom(20))) + ".png", img)
 
-        else:
-            # Uncomment to enable saving wrong images (e.g. to later inspect them)
-            # cv2.imwrite(sys.argv[1][:-4] + ".wrongmatch-" + str(binascii.hexlify(os.urandom(20))) + ".png", img)
-            continue
+            custom_config = r"--psm 8 --oem 3 -c tessedit_char_whitelist=0123456789"
+            res = pytesseract.image_to_string(img, config=custom_config)
+            match = re.match(r"\d{6,6}", res)
+            if match:
+                best_matches[match.group()] += 1
+
+            else:
+                # Uncomment to enable saving wrong images (e.g. to later inspect them)
+                # cv2.imwrite(sys.argv[1][:-4] + ".wrongmatch-" + str(binascii.hexlify(os.urandom(20))) + ".png", img)
+                continue
 
     if len(best_matches) == 0:
         return
